@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pickle
 import os
@@ -69,4 +68,4 @@ if model_ready and vectorizer_ready:
         st.header("🚨 SPAM" if prediction else "✅ NOT SPAM")
 else:
     st.sidebar.error("⚠️ Model or Vectorizer not ready.")
-    st.write("Please ensure `model.pkl`, `vectorizer.pkl`, and `spam.csv` exist in your repo.")S
+    st.write("Please ensure `model.pkl`, `vectorizer.pkl`, and `spam.csv` exist in your repo.")
