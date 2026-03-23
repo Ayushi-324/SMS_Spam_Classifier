@@ -25,17 +25,12 @@ I built this project to understand the workflow deeply rather than just reproduc
 ## The Technical Workflow
 To achieve 97% accuracy and 100% precision, I developed a rigorous data science pipeline:
 
-**Data Cleaning & EDA**: Handled duplicates and explored word distributions to distinguish between Spam and Ham.
-
-**Text Preprocessing (NLP)**: Created a custom cleaning function for Tokenization, Normalization, Stop-word Removal, and Porter Stemming.
-
-**Feature Extraction**: Implemented TF-IDF (Term Frequency-Inverse Document Frequency) to convert processed text into numerical vectors based on word importance.
-
-**Model Training & Comparison**: Evaluated multiple algorithms, ultimately selecting Multinomial Naive Bayes for its superior performance on text-frequency data.
-
-**Model Serialization**: Used Pickle to export the trained model and vectorizer for production use.
-
-**Deployment**: Built an interactive web interface using Gradio and successfully deployed it on Hugging Face Spaces.
+* **Data Cleaning & EDA**: Handled duplicates and explored word distributions to distinguish between Spam and Ham.
+* **Text Preprocessing (NLP)**: Created a custom cleaning function for Tokenization, Normalization, Stop-word Removal, and Porter Stemming.
+* **Feature Extraction**: Implemented TF-IDF (Term Frequency-Inverse Document Frequency) to convert processed text into numerical vectors based on word importance.
+* **Model Training & Comparison**: Evaluated multiple algorithms, ultimately selecting Multinomial Naive Bayes for its superior performance on text-frequency data.
+* **Model Serialization**: Used Pickle to export the trained model and vectorizer for production use.
+* **Deployment**: Built an interactive web interface using Gradio and successfully deployed it on Hugging Face Spaces.
 
 ## Metrics
 - **Accuracy:** 97.2%
