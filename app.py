@@ -1,71 +1,53 @@
 import streamlit as st
 import pickle
-import os
-import pandas as pd
 import string
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem.porter import PorterStemmer
-from sklearn.feature_extraction.text import TfidfVectorizer
 
-# -----------------------------
-# NLTK download safeguards
-# -----------------------------
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
-
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('stopwords')
 
 ps = PorterStemmer()
 
-# -----------------------------
-# Preprocessing function
-# -----------------------------
 def transform_text(text):
     text = text.lower()
-    tokens = word_tokenize(text)
-    tokens = [t for t in tokens if t.isalnum() and t not in stopwords.words('english')]
-    tokens = [ps.stem(t) for t in tokens]
-    return " ".join(tokens)
+    text = word_tokenize(text)
 
-# -----------------------------
-# Load model & vectorizer safely
-# -----------------------------
-model_ready = False
-vectorizer_ready = False
+    y = []
+    for i in text:
+        if i.isalnum():
+            y.append(i)
 
-if os.path.exists("model.pkl") and os.path.exists("vectorizer.pkl"):
-    # Load model
-    with open("model.pkl", "rb") as f:
-        model = pickle.load(f)
-    model_ready = True
+    text = y[:]
+    y.clear()
 
-    # Load vectorizer
-    with open("vectorizer.pkl", "rb") as f:
-        tfidf = pickle.load(f)
+    for i in text:
+        if i not in stopwords.words('english') and i not in string.punctuation:
+            y.append(i)
 
-    # Check if vectorizer is fitted
-    if hasattr(tfidf, "idf_"):
-        vectorizer_ready = True
+    text = y[:]
+    y.clear()
 
-# Streamlit UI
-st.title("SMS/Email Spam Classifier")
+    for i in text:
+        y.append(ps.stem(i))
 
-if model_ready and vectorizer_ready:
-    st.sidebar.success("✅ Model & Vectorizer Ready")
-    input_sms = st.text_area("Enter the message:")
-    
-    if st.button("Predict"):
-        transformed = transform_text(input_sms)
-        vector_input = tfidf.transform([transformed])
-        prediction = model.predict(vector_input)[0]
-        st.header("🚨 SPAM" if prediction else "✅ NOT SPAM")
-else:
-    st.sidebar.error("⚠️ Model or Vectorizer not ready.")
-    st.write("Please ensure `model.pkl`, `vectorizer.pkl`, and `spam.csv` exist in your repo.")
+    return " ".join(y)
+
+tfidf = pickle.load(open('vectorizer.pkl', 'rb'))
+model = pickle.load(open('model.pkl', 'rb'))
+
+st.title("SMS Spam Classifier")
+
+input_sms = st.text_area("Enter the message")
+
+if st.button("Predict"):
+    transformed_sms = transform_text(input_sms)
+    vector_input = tfidf.transform([transformed_sms])
+    result = model.predict(vector_input)[0]
+
+    if result == 1:
+        st.header("Spam")
+    else:
+        st.header("Not Spam")
