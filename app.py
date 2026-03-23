@@ -1,102 +1,98 @@
+
 import streamlit as st
 import pickle
-import os
 import string
 import pandas as pd
-import nltk
+import os
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.exceptions import NotFittedError
+import nltk
 
-# ---------------------
-# 1️⃣ Safe NLTK download
-# ---------------------
-nltk_packages = ["punkt", "stopwords"]
-for pack in nltk_packages:
+# --- 0. SET UP PATHS ---
+BASE_DIR = os.path.dirname(__file__)
+MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
+VECT_PATH = os.path.join(BASE_DIR, "vectorizer.pkl")
+CSV_PATH = os.path.join(BASE_DIR, "spam.csv")
+
+# --- 1. NLTK DOWNLOAD SAFEGUARDS ---
+for resource in ["punkt", "stopwords"]:
     try:
-        nltk.data.find(f"tokenizers/{pack}" if pack=="punkt" else f"corpora/{pack}")
+        nltk.data.find(f"tokenizers/{resource}" if resource=="punkt" else f"corpora/{resource}")
     except LookupError:
-        nltk.download(pack)
+        nltk.download(resource)
 
 ps = PorterStemmer()
 
-# ---------------------
-# 2️⃣ Text preprocessing
-# ---------------------
+# --- 2. TEXT PREPROCESSING ---
 def transform_text(text):
     text = text.lower()
-    text = word_tokenize(text)
+    tokens = word_tokenize(text)
+
     # remove non-alphanumeric
-    text = [i for i in text if i.isalnum()]
-    # remove stopwords and punctuation
-    text = [i for i in text if i not in stopwords.words('english') and i not in string.punctuation]
+    tokens = [t for t in tokens if t.isalnum()]
+
+    # remove stopwords
+    tokens = [t for t in tokens if t not in stopwords.words("english") and t not in string.punctuation]
+
     # stemming
-    text = [ps.stem(i) for i in text]
-    return " ".join(text)
+    tokens = [ps.stem(t) for t in tokens]
 
-# ---------------------
-# 3️⃣ Load TF-IDF and Model
-# ---------------------
-MODEL_PATH = "model.pkl"
-VECTORIZER_PATH = "vectorizer.pkl"
-CSV_PATH = "spam.csv"
+    return " ".join(tokens)
 
-# Load TF-IDF vectorizer safely
-tfidf = None
-if os.path.exists(VECTORIZER_PATH):
-    try:
-        with open(VECTORIZER_PATH, "rb") as f:
-            tfidf = pickle.load(f)
-    except Exception:
-        tfidf = None
-
-# Fallback: fit locally if pickle fails
-if tfidf is None:
-    if os.path.exists(CSV_PATH):
-        df = pd.read_csv(CSV_PATH, encoding="ISO-8859-1")
-        df = df[['v1','v2']]
-        tfidf = TfidfVectorizer(max_features=3000)
-        tfidf.fit(df['v2'].apply(transform_text))
-        # save pickle for next time
-        with open(VECTORIZER_PATH, "wb") as f:
-            pickle.dump(tfidf, f)
-        st.info("✅ Vectorizer fitted locally and saved!")
-    else:
-        st.error(f"❌ {CSV_PATH} not found in repo. Upload it to GitHub.")
-        st.stop()
-
-# Load model
-if os.path.exists(MODEL_PATH):
-    with open(MODEL_PATH, "rb") as f:
-        model = pickle.load(f)
-else:
-    st.error(f"❌ {MODEL_PATH} not found in repo. Upload it to GitHub.")
+# --- 3. LOAD MODEL AND VECTORIZER ---
+try:
+    model = pickle.load(open(MODEL_PATH, "rb"))
+except Exception as e:
+    st.error(f"Model could not be loaded: {e}")
     st.stop()
 
-# ---------------------
-# 4️⃣ Streamlit UI
-# ---------------------
-st.title("Email/SMS Spam Classifier")
+try:
+    tfidf = pickle.load(open(VECT_PATH, "rb"))
+except Exception as e:
+    st.warning(f"Vectorizer not loaded, will try to fit locally: {e}")
+    tfidf = None
 
-input_sms = st.text_area("Enter the Message:")
+# --- 4. FIT TF-IDF LOCALLY IF NEEDED ---
+if tfidf is None or not hasattr(tfidf, "idf_"):
+    if os.path.exists(CSV_PATH):
+        st.info("Vectorizer not fitted. Fitting using local spam.csv...")
+        df = pd.read_csv(CSV_PATH, encoding="ISO-8859-1")
+        df = df[['v1','v2']]
+        df.columns = ['label','message']
+        tfidf = TfidfVectorizer(max_features=3000)
+        tfidf.fit(df['message'].apply(transform_text))
+
+        # save back
+        with open(VECT_PATH, "wb") as f:
+            pickle.dump(tfidf, f)
+        st.success("Vectorizer fitted and saved!")
+    else:
+        st.error(f"spam.csv not found at {CSV_PATH}. Please include it in repo.")
+        st.stop()
+
+# --- 5. STREAMLIT UI ---
+st.title("SMS / Email Spam Classifier")
+
+input_sms = st.text_area("Enter your message here:")
 
 if st.button("Predict"):
-    if tfidf is None or not hasattr(tfidf, "idf_"):
-        st.error("⚠️ Vectorizer not ready. Ensure spam.csv exists and TF-IDF is fitted.")
-    else:
+    try:
         transformed_sms = transform_text(input_sms)
         vector_input = tfidf.transform([transformed_sms])
         result = model.predict(vector_input)[0]
+
         if result == 1:
             st.header("🚨 SPAM")
         else:
             st.header("✅ NOT SPAM")
+    except NotFittedError:
+        st.error("Vectorizer is still not fitted. Please check spam.csv or tfidf.pkl.")
 
-# ---------------------
-# 5️⃣ Sidebar status
-# ---------------------
-if hasattr(tfidf, 'idf_'):
-    st.sidebar.success("Model Status: Ready ✅")
+# --- 6. DEBUG INFO ---
+if hasattr(tfidf, "idf_"):
+    st.sidebar.success("Model Status: Ready to go!")
 else:
-    st.sidebar.error("Model Status: Not Fitted ❌")
+    st.sidebar.error("Model Status: Not Fitted")
