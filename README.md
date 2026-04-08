@@ -7,13 +7,13 @@ An NLP-based machine learning project that classifies SMS messages as spam or no
 I built this project to understand the workflow deeply rather than just reproduce the output. The process included data cleaning, text preprocessing, feature extraction with TF-IDF, model training, model comparison, and turning the final model into a gradio based web application
 
 <p align="center">
-  <img src="plots/spam_prediction.png" width="800"/>
+  <img src="plots/spam_prediction.png" width="1000"/>
   <br>
   <em>Model correctly classifying a Spam message</em>
 <p>
 
 <p align="center">
-  <img src="plots/spam_project.png" width="800"/>
+  <img src="plots/spam_project.png" width="1000"/>
   <br>
   <em>Model correctly classifying a Ham message</em>
 <p>
